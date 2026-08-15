@@ -7,6 +7,7 @@ namespace AlveBy\QueueManager\Redis;
 use AlveBy\QueueManager\Contracts\JobIndex;
 use AlveBy\QueueManager\Support\Keys;
 use Illuminate\Redis\Connections\Connection as RedisConnection;
+use Illuminate\Redis\Connections\PhpRedisConnection;
 use Predis\ClientInterface as PredisClient;
 use Throwable;
 
@@ -22,6 +23,14 @@ use Throwable;
 final class QueueDiscovery
 {
     /**
+     * Discovery walks the keyspace, and job lookups without a queue hint ask
+     * for it once per connection. Memoise for the life of the request.
+     *
+     * @var array<string, array<int, string>>
+     */
+    private array $cache = [];
+
+    /**
      * @param  array<int, string>  $extraQueues
      */
     public function __construct(
@@ -36,6 +45,10 @@ final class QueueDiscovery
      */
     public function for(QueueConnection $connection, RedisConnection $redis): array
     {
+        if (isset($this->cache[$connection->name])) {
+            return $this->cache[$connection->name];
+        }
+
         $queues = $connection->defaultQueues;
 
         foreach ($this->extraQueues as $queue) {
@@ -58,15 +71,20 @@ final class QueueDiscovery
 
         sort($queues);
 
-        return $queues;
+        return $this->cache[$connection->name] = $queues;
+    }
+
+    /**
+     * Forget memoised queue names. Long-running processes that create queues
+     * on the fly need this; a normal request does not.
+     */
+    public function flush(): void
+    {
+        $this->cache = [];
     }
 
     /**
      * SCAN for queues:* and strip the structural suffixes back to queue names.
-     *
-     * Whether the client prefixes a SCAN MATCH pattern for you depends on the
-     * driver, so both forms are tried and the results unioned. The wrong one
-     * simply matches nothing.
      *
      * @return array<int, string>
      */
@@ -74,35 +92,37 @@ final class QueueDiscovery
     {
         $prefix = $this->clientPrefix($redis);
 
-        $patterns = array_values(array_unique(array_filter([
-            $this->keys->queueDiscoveryPattern(),
-            $prefix === '' ? null : $prefix.$this->keys->queueDiscoveryPattern(),
-        ])));
+        // Neither phpredis nor predis applies the connection prefix to a SCAN
+        // MATCH pattern, and neither strips it from the keys that come back,
+        // so the prefix goes on by hand and comes off by hand. phpredis will
+        // do the prefixing itself if it was explicitly asked to.
+        $pattern = $this->prefixesScanPatterns($redis)
+            ? $this->keys->queueDiscoveryPattern()
+            : $prefix.$this->keys->queueDiscoveryPattern();
 
         $queues = [];
 
-        foreach ($patterns as $pattern) {
-            foreach ($this->scanKeys($redis, $pattern) as $key) {
-                if ($prefix !== '' && str_starts_with($key, $prefix)) {
-                    $key = substr($key, strlen($prefix));
-                }
+        foreach ($this->scanKeys($redis, $pattern) as $key) {
+            if ($prefix !== '' && str_starts_with($key, $prefix)) {
+                $key = substr($key, strlen($prefix));
+            }
 
-                if (! str_starts_with($key, 'queues:')) {
-                    continue;
-                }
+            if (! str_starts_with($key, 'queues:')) {
+                continue;
+            }
 
-                $name = substr($key, strlen('queues:'));
+            $name = substr($key, strlen('queues:'));
 
-                foreach ([':notify', ':delayed', ':reserved'] as $suffix) {
-                    if (str_ends_with($name, $suffix)) {
-                        $name = substr($name, 0, -strlen($suffix));
-                        break;
-                    }
-                }
+            foreach ([':notify', ':delayed', ':reserved'] as $suffix) {
+                if (str_ends_with($name, $suffix)) {
+                    $name = substr($name, 0, -strlen($suffix));
 
-                if ($name !== '') {
-                    $queues[$name] = true;
+                    break;
                 }
+            }
+
+            if ($name !== '') {
+                $queues[$name] = true;
             }
         }
 
@@ -115,7 +135,7 @@ final class QueueDiscovery
     private function scanKeys(RedisConnection $redis, string $pattern): array
     {
         $keys = [];
-        $cursor = 0;
+        $cursor = $this->initialCursor($redis);
         $guard = 0;
 
         try {
@@ -131,14 +151,48 @@ final class QueueDiscovery
                 foreach ((array) $found as $key) {
                     $keys[] = (string) $key;
                 }
-            } while ((int) $cursor !== 0 && ++$guard < 1000);
+            } while ($cursor !== null && (string) $cursor !== '0' && ++$guard < 10000);
         } catch (Throwable) {
             // Discovery is best effort; the declared and registered queue
-            // names above are always available.
+            // names are always available without it.
             return [];
         }
 
         return $keys;
+    }
+
+    /**
+     * phpredis 6.1+ wants the iterator to start as null and reports the scan
+     * as already finished if it is handed a 0. Predis wants '0'. Mirrors what
+     * Illuminate\Cache\RedisStore does for the same reason.
+     */
+    private function initialCursor(RedisConnection $redis): string|int|null
+    {
+        if ($redis instanceof PhpRedisConnection
+            && version_compare((string) phpversion('redis'), '6.1.0', '>=')) {
+            return null;
+        }
+
+        return '0';
+    }
+
+    /**
+     * True when the client has been told to apply the connection prefix to
+     * SCAN patterns itself (phpredis OPT_SCAN = SCAN_PREFIX).
+     */
+    private function prefixesScanPatterns(RedisConnection $redis): bool
+    {
+        try {
+            $client = $redis->client();
+
+            if (! defined('Redis::SCAN_PREFIX') || ! method_exists($client, 'getOption')) {
+                return false;
+            }
+
+            return (int) $client->getOption(\Redis::OPT_SCAN) === \Redis::SCAN_PREFIX;
+        } catch (Throwable) {
+            return false;
+        }
     }
 
     private function clientPrefix(RedisConnection $redis): string
