@@ -1,0 +1,66 @@
+{
+    "name": "alveby/laravel-queue-manager",
+    "description": "Cancel, delete, pause, reschedule and inspect Laravel queue jobs from code. Redis driver, no UI required.",
+    "keywords": ["laravel", "queue", "redis", "jobs", "cancel", "pause", "horizon"],
+    "license": "MIT",
+    "homepage": "https://github.com/AlveBy/laravel-queue-manager",
+    "authors": [
+        {
+            "name": "Pisarev Alexei",
+            "email": "info@alve.by",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/AlveBy/laravel-queue-manager/issues",
+        "source": "https://github.com/AlveBy/laravel-queue-manager"
+    },
+    "require": {
+        "php": "^8.2",
+        "illuminate/console": "^10.0|^11.0|^12.0",
+        "illuminate/contracts": "^10.0|^11.0|^12.0",
+        "illuminate/queue": "^10.0|^11.0|^12.0",
+        "illuminate/redis": "^10.0|^11.0|^12.0",
+        "illuminate/support": "^10.0|^11.0|^12.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.30",
+        "mockery/mockery": "^1.6",
+        "orchestra/testbench": "^8.14|^9.0|^10.0",
+        "phpunit/phpunit": "^10.5|^11.0",
+        "predis/predis": "^2.2"
+    },
+    "suggest": {
+        "laravel/horizon": "Supported: the package swaps in a Horizon-aware pausable queue when Horizon is installed."
+    },
+    "autoload": {
+        "psr-4": {
+            "AlveBy\\QueueManager\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "AlveBy\\QueueManager\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "AlveBy\\QueueManager\\QueueManagerServiceProvider"
+            ],
+            "aliases": {
+                "QueueManager": "AlveBy\\QueueManager\\Facades\\QueueManager"
+            }
+        }
+    },
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "lint": "vendor/bin/pint",
+        "lint:test": "vendor/bin/pint --test"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
