@@ -18,9 +18,9 @@ use DateTimeInterface;
  * side says paused, the queue is paused.
  *
  * The pausable connector deliberately reads the inner store directly rather
- * than going through here — on Laravel 12 the framework has already made its
- * own check by the time pop() is reached, and a second cache read per poll
- * would buy nothing.
+ * than going through here — the framework has usually made its own check by
+ * the time pop() is reached, and a second cache read per poll would buy
+ * nothing.
  */
 final class CompositePauseStore implements PauseStore
 {

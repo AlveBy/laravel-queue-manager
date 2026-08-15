@@ -22,9 +22,12 @@ QueueManager::search()->tag('client:123')->get();
 
 ## Requirements
 
-- PHP 8.2+
-- Laravel 10, 11 or 12
+- PHP 8.2+ (8.3+ on Laravel 13)
+- Laravel 12 or 13
 - A queue connection using the `redis` driver
+
+Laravel 10 and 11 are out of security support and Composer now refuses to
+install them, so they are not supported here.
 
 ## Installation
 
@@ -142,11 +145,16 @@ QueueManager::resumeAll();
 `queue:work` keeps running throughout; it just sees an empty queue. Pausing is
 per queue, so `--queue=high,low` with `low` paused keeps draining `high`.
 
-**Laravel 12** pauses queues natively (`queue:pause`, backed by the cache).
-When that is available both flags are written and cleared together, so this
-package and the framework's own commands never disagree. On Laravel 10 and 11
-the package swaps in a `RedisQueue` subclass whose `pop()` returns null while
-paused, which is why the redis connector is replaced at boot.
+Laravel pauses queues natively too (`queue:pause`, backed by the cache, read by
+the worker before it pops). Both flags are written and cleared together, so
+this package and the framework's own commands never disagree.
+
+On top of that the package swaps the redis connector for a `RedisQueue`
+subclass whose `pop()` returns null while paused. That is the belt to the
+framework's braces: it keeps working when the cache store is unavailable, and
+when `Queue::disablePolling()` has switched the native check off. Set
+`pause.enabled` to `false` to leave the connector alone, or `pause.native` to
+`false` to stop writing the framework's flag.
 
 **Horizon** subclasses `RedisQueue`, so the package detects it and extends
 Horizon's class instead of the framework's. No configuration needed.

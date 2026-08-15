@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   still finish.
 - Pause and resume queues, with an optional expiry and a recorded reason.
   Workers keep running and stop consuming; nothing is moved or lost. Kept in
-  sync with Laravel 12's own `queue:pause` when that exists.
+  sync with the framework's own `queue:pause` when that exists.
 - Horizon support: the pausable queue extends Horizon's `RedisQueue` when
   Horizon is installed.
 - Delete, reschedule and promote-to-ready for individual jobs, and purge for

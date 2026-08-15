@@ -70,10 +70,10 @@ return [
     | null while the queue is paused, so plain `queue:work` keeps running but
     | stops consuming. Set "enabled" to false to leave the connector alone.
     |
-    | Laravel 12 pauses queues natively (`queue:pause`, backed by the cache).
+    | Laravel also pauses queues natively (`queue:pause`, backed by the cache).
     | With "native" => true the two are kept in sync: pausing writes both
     | flags and resuming clears both, so this package and `queue:resume`
-    | never disagree. Ignored on Laravel versions without native pausing.
+    | never disagree. Ignored if the framework has no native pausing.
     |
     | "cache_ttl" caches the paused flag in the worker process for N seconds
     | to skip a Redis round-trip per poll. 0 = always read fresh.

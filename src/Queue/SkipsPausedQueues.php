@@ -20,10 +20,9 @@ trait SkipsPausedQueues
     private ?RedisPauseStore $pauseStore = null;
 
     /**
-     * Laravel 12 added the $index parameter. Declaring it here keeps the
-     * signature compatible with that version, and passing it through on
-     * older ones is harmless — PHP ignores extra arguments to userland
-     * functions.
+     * The $index parameter mirrors RedisQueue::pop(). Passing it through to a
+     * parent that does not declare it is harmless — PHP ignores extra
+     * arguments to userland functions.
      *
      * @param  string|null  $queue
      * @param  int  $index
@@ -45,9 +44,9 @@ trait SkipsPausedQueues
     {
         try {
             // Deliberately the concrete store, not the PauseStore contract:
-            // on Laravel 12 the contract is bound to a composite that also
-            // reads the framework's cache flag, which the worker has already
-            // checked before it ever reaches pop().
+            // the contract is bound to a composite that also reads the
+            // framework's cache flag, which the worker has already checked
+            // before it ever reaches pop().
             $store = $this->pauseStore ??= Container::getInstance()->make(RedisPauseStore::class);
 
             return $store->isPaused(

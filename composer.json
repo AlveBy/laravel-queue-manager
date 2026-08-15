@@ -17,17 +17,17 @@
     },
     "require": {
         "php": "^8.2",
-        "illuminate/console": "^10.0|^11.0|^12.0",
-        "illuminate/contracts": "^10.0|^11.0|^12.0",
-        "illuminate/queue": "^10.0|^11.0|^12.0",
-        "illuminate/redis": "^10.0|^11.0|^12.0",
-        "illuminate/support": "^10.0|^11.0|^12.0"
+        "illuminate/console": "^12.0|^13.0",
+        "illuminate/contracts": "^12.0|^13.0",
+        "illuminate/queue": "^12.0|^13.0",
+        "illuminate/redis": "^12.0|^13.0",
+        "illuminate/support": "^12.0|^13.0"
     },
     "require-dev": {
         "laravel/pint": "^1.30",
         "mockery/mockery": "^1.6",
-        "orchestra/testbench": "^8.14|^9.0|^10.0",
-        "phpunit/phpunit": "^10.5|^11.0",
+        "orchestra/testbench": "^10.0|^11.0",
+        "phpunit/phpunit": "^11.0|^12.0",
         "predis/predis": "^2.2"
     },
     "suggest": {

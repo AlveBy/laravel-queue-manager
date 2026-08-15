@@ -17,8 +17,9 @@ use Throwable;
  * every pause into it, so this package and the framework's own commands
  * always agree on whether a queue is running.
  *
- * On Laravel 10 and 11 there is nothing to mirror into and the pausable
- * connector is the only mechanism.
+ * The pausable connector stays in place regardless: it still covers the cases
+ * the native check does not, such as an unavailable cache store or a worker
+ * running with polling disabled.
  */
 final class NativePauseBridge
 {
